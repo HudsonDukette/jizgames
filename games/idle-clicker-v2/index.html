@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Idle Empire - Bubble Arcade</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;700;800&family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Fredoka', sans-serif;
+            background: linear-gradient(135deg, #FFD89B 0%, #19547B 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 30px;
+            padding: 30px;
+            max-width: 500px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            text-align: center;
+        }
+
+        h1 {
+            font-family: 'Baloo 2', sans-serif;
+            font-size: 2.2rem;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .currency-display {
+            font-size: 1.8rem;
+            color: #FFD700;
+            font-weight: 700;
+            background: linear-gradient(135deg, #FFD89B 0%, #19547B 100%);
+            padding: 15px 20px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            color: white;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+        }
+
+        .currency-label {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        .upgrades {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 12px;
+            margin: 20px 0;
+        }
+
+        .upgrade-card {
+            background: #f5f5f5;
+            border-radius: 15px;
+            padding: 15px;
+            border: 2px solid #ddd;
+            transition: all 0.3s ease;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .upgrade-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+            border-color: #FFD700;
+        }
+
+        .upgrade-info h3 {
+            font-size: 1.1rem;
+            color: #333;
+            margin-bottom: 5px;
+            text-align: left;
+        }
+
+        .upgrade-info p {
+            font-size: 0.85rem;
+            color: #666;
+            text-align: left;
+        }
+
+        .upgrade-cost {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 8px 15px;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 0.95rem;
+            white-space: nowrap;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .upgrade-cost:hover {
+            transform: scale(1.05);
+        }
+
+        .upgrade-cost:disabled, .upgrade-cost.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: scale(1);
+        }
+
+        .buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        button:not(.upgrade-cost) {
+            flex: 1;
+            padding: 12px;
+            font-size: 1rem;
+            border: none;
+            border-radius: 15px;
+            cursor: pointer;
+            font-family: 'Fredoka', sans-serif;
+            font-weight: 700;
+            transition: all 0.3s ease;
+        }
+
+        .restart-btn {
+            background: linear-gradient(135deg, #FFD89B 0%, #19547B 100%);
+            color: white;
+        }
+
+        .back-btn {
+            background: #ddd;
+            color: #333;
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                padding: 20px;
+            }
+
+            h1 {
+                font-size: 1.8rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>👑 Idle Empire</h1>
+        
+        <div class="currency-display">
+            <div class="currency-label">💰 Gold</div>
+            <div id="gold">0</div>
+        </div>
+
+        <div class="upgrades" id="upgradesContainer"></div>
+
+        <div class="buttons">
+            <button class="restart-btn" onclick="resetGame()">Reset Game</button>
+            <button class="back-btn" onclick="window.history.back()">Back</button>
+        </div>
+    </div>
+
+    <script>
+        let gold = localStorage.getItem('idleGold') ? parseInt(localStorage.getItem('idleGold')) : 0;
+        const goldDisplay = document.getElementById('gold');
+
+        const upgrades = [
+            { id: 'mine', name: '⛏️ Gold Mine', desc: '+1 gold/sec', cost: 10, income: 1, owned: 0 },
+            { id: 'worker', name: '👷 Worker', desc: '+2 gold/sec', cost: 50, income: 2, owned: 0 },
+            { id: 'factory', name: '🏭 Factory', desc: '+10 gold/sec', cost: 200, income: 10, owned: 0 },
+            { id: 'bank', name: '🏦 Bank', desc: '+50 gold/sec', cost: 1000, income: 50, owned: 0 },
+            { id: 'empire', name: '🏰 Empire', desc: '+200 gold/sec', cost: 5000, income: 200, owned: 0 }
+        ];
+
+        function saveGame() {
+            localStorage.setItem('idleGold', gold);
+            upgrades.forEach(u => localStorage.setItem(`idle_${u.id}`, u.owned));
+        }
+
+        function loadGame() {
+            upgrades.forEach(u => {
+                u.owned = localStorage.getItem(`idle_${u.id}`) ? parseInt(localStorage.getItem(`idle_${u.id}`)) : 0;
+            });
+        }
+
+        function playBeep(frequency = 800) {
+            try {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = audioContext.createOscillator();
+                const gain = audioContext.createGain();
+                osc.connect(gain);
+                gain.connect(audioContext.destination);
+                osc.frequency.value = frequency;
+                gain.gain.setValueAtTime(0.3, audioContext.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.05);
+                osc.start(audioContext.currentTime);
+                osc.stop(audioContext.currentTime + 0.05);
+            } catch (e) {}
+        }
+
+        function renderUpgrades() {
+            const container = document.getElementById('upgradesContainer');
+            container.innerHTML = '';
+            upgrades.forEach(upgrade => {
+                const card = document.createElement('div');
+                card.className = 'upgrade-card';
+                const canBuy = gold >= upgrade.cost;
+                card.innerHTML = `
+                    <div class="upgrade-info">
+                        <h3>${upgrade.name} <span style="font-size: 0.9rem; color: #999;">(${upgrade.owned})</span></h3>
+                        <p>${upgrade.desc}</p>
+                    </div>
+                    <button class="upgrade-cost ${!canBuy ? 'disabled' : ''}" onclick="buyUpgrade('${upgrade.id}')" ${!canBuy ? 'disabled' : ''}>
+                        ${upgrade.cost}
+                    </button>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function buyUpgrade(id) {
+            const upgrade = upgrades.find(u => u.id === id);
+            if (gold >= upgrade.cost) {
+                gold -= upgrade.cost;
+                upgrade.owned++;
+                goldDisplay.textContent = gold;
+                saveGame();
+                renderUpgrades();
+                playBeep(1000);
+            }
+        }
+
+        function resetGame() {
+            if (confirm('Reset all progress? This cannot be undone.')) {
+                gold = 0;
+                upgrades.forEach(u => u.owned = 0);
+                saveGame();
+                goldDisplay.textContent = gold;
+                renderUpgrades();
+            }
+        }
+
+        // Passive income
+        setInterval(() => {
+            upgrades.forEach(u => {
+                gold += u.income * u.owned;
+            });
+            goldDisplay.textContent = gold;
+            saveGame();
+        }, 1000);
+
+        loadGame();
+        goldDisplay.textContent = gold;
+        renderUpgrades();
+    </script>
+</body>
+</html>

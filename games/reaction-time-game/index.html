@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Speed Test - Bubble Arcade</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;700;800&family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Fredoka', sans-serif;
+            background: linear-gradient(135deg, #F6D365 0%, #FDA085 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 30px;
+            padding: 40px;
+            max-width: 500px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            text-align: center;
+        }
+
+        h1 {
+            font-family: 'Baloo 2', sans-serif;
+            font-size: 2.5rem;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .instructions {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1rem;
+            line-height: 1.5;
+        }
+
+        .ready-box {
+            background: #FFE66D;
+            border-radius: 20px;
+            padding: 30px;
+            margin: 20px 0;
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #333;
+        }
+
+        .reaction-box {
+            background: #FF6B6B;
+            border-radius: 20px;
+            padding: 30px;
+            margin: 20px 0;
+            font-size: 1.5rem;
+            color: white;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .reaction-box:hover {
+            transform: scale(1.05);
+        }
+
+        .reaction-box:active {
+            transform: scale(0.95);
+        }
+
+        .reaction-time {
+            font-size: 3rem;
+            font-family: 'Baloo 2', sans-serif;
+            color: #667eea;
+            font-weight: 700;
+            margin: 20px 0;
+        }
+
+        .result-text {
+            font-size: 1.2rem;
+            color: #666;
+            margin: 10px 0;
+        }
+
+        .buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        button {
+            flex: 1;
+            padding: 12px;
+            font-size: 1rem;
+            border: none;
+            border-radius: 15px;
+            cursor: pointer;
+            font-family: 'Fredoka', sans-serif;
+            font-weight: 700;
+            transition: all 0.3s ease;
+        }
+
+        .restart-btn {
+            background: linear-gradient(135deg, #F6D365 0%, #FDA085 100%);
+            color: white;
+        }
+
+        .back-btn {
+            background: #ddd;
+            color: #333;
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                padding: 20px;
+            }
+
+            h1 {
+                font-size: 1.8rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>⚡ Speed Test</h1>
+        
+        <div class="instructions">
+            Wait for the green light, then click ASAP!<br>
+            Measure how fast you are! 🚀
+        </div>
+
+        <div id="readyBox" class="ready-box" style="display: block;">
+            ⏱️ Get Ready...
+        </div>
+
+        <div id="goBox" class="reaction-box" style="display: none;">
+            ✨ GO! Click!
+        </div>
+
+        <div id="resultBox" style="display: none;">
+            <div class="result-text">Your reaction time:</div>
+            <div class="reaction-time" id="reactionTime">0ms</div>
+            <div class="result-text" id="resultComment"></div>
+        </div>
+
+        <div class="buttons">
+            <button class="restart-btn" onclick="startTest()">Try Again</button>
+            <button class="back-btn" onclick="window.history.back()">Back</button>
+        </div>
+    </div>
+
+    <script>
+        let testStarted = false;
+        let testStartTime = 0;
+
+        function playBeep(frequency = 800, duration = 100) {
+            try {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = audioContext.createOscillator();
+                const gain = audioContext.createGain();
+                osc.connect(gain);
+                gain.connect(audioContext.destination);
+                osc.frequency.value = frequency;
+                gain.gain.setValueAtTime(0.3, audioContext.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration / 1000);
+                osc.start(audioContext.currentTime);
+                osc.stop(audioContext.currentTime + duration / 1000);
+            } catch (e) {}
+        }
+
+        function startTest() {
+            const readyBox = document.getElementById('readyBox');
+            const goBox = document.getElementById('goBox');
+            const resultBox = document.getElementById('resultBox');
+            
+            readyBox.style.display = 'block';
+            goBox.style.display = 'none';
+            resultBox.style.display = 'none';
+            testStarted = false;
+
+            const delay = Math.random() * 3000 + 1000;
+            setTimeout(() => {
+                readyBox.style.display = 'none';
+                goBox.style.display = 'block';
+                testStarted = true;
+                testStartTime = Date.now();
+                playBeep(1200, 100);
+            }, delay);
+        }
+
+        document.getElementById('goBox').addEventListener('click', () => {
+            if (!testStarted) return;
+            
+            const reactionTime = Date.now() - testStartTime;
+            const goBox = document.getElementById('goBox');
+            const resultBox = document.getElementById('resultBox');
+            
+            goBox.style.display = 'none';
+            resultBox.style.display = 'block';
+            
+            document.getElementById('reactionTime').textContent = reactionTime + 'ms';
+            
+            let comment = '';
+            if (reactionTime < 150) comment = '🔥 INSANE! You are a superhuman!';
+            else if (reactionTime < 200) comment = '😎 Excellent! Professional reflexes!';
+            else if (reactionTime < 250) comment = '👍 Great! Above average!';
+            else if (reactionTime < 300) comment = '✓ Good! Normal reaction time!';
+            else if (reactionTime < 350) comment = '😅 Okay! You might be tired...';
+            else comment = '🐢 Slow! Had some coffee?';
+            
+            document.getElementById('resultComment').textContent = comment;
+            testStarted = false;
+            playBeep(1000, 200);
+        });
+
+        startTest();
+    </script>
+</body>
+</html>

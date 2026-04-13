@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rock Paper Scissors - Bubble Arcade</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;700;800&family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Fredoka', sans-serif;
+            background: linear-gradient(135deg, #FA8BFF 0%, #2BD2FF 90%, #2BFF88 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 30px;
+            padding: 30px;
+            max-width: 500px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            text-align: center;
+        }
+
+        h1 {
+            font-family: 'Baloo 2', sans-serif;
+            font-size: 2rem;
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        .scoreboard {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 20px;
+            font-size: 1rem;
+        }
+
+        .score-item {
+            color: #666;
+        }
+
+        .score-value {
+            display: block;
+            font-size: 1.8rem;
+            color: #667eea;
+            font-weight: 700;
+        }
+
+        .choices {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .choice-btn {
+            width: 70px;
+            height: 70px;
+            border-radius: 15px;
+            border: 3px solid #ddd;
+            font-size: 2.5rem;
+            cursor: pointer;
+            background: white;
+            transition: all 0.2s ease;
+        }
+
+        .choice-btn:hover {
+            transform: scale(1.1);
+            border-color: #667eea;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+
+        .choice-btn:active {
+            transform: scale(0.95);
+        }
+
+        .result {
+            min-height: 80px;
+            margin: 20px 0;
+        }
+
+        .result-text {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .result-details {
+            font-size: 1rem;
+            color: #666;
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+        }
+
+        .result-item {
+            text-align: center;
+        }
+
+        .result-emoji {
+            font-size: 2.5rem;
+            margin-bottom: 5px;
+        }
+
+        .buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        button:not(.choice-btn) {
+            flex: 1;
+            padding: 12px;
+            font-size: 1rem;
+            border: none;
+            border-radius: 15px;
+            cursor: pointer;
+            font-family: 'Fredoka', sans-serif;
+            font-weight: 700;
+            transition: all 0.3s ease;
+        }
+
+        .restart-btn {
+            background: linear-gradient(135deg, #FA8BFF 0%, #2BD2FF 100%);
+            color: white;
+        }
+
+        .back-btn {
+            background: #ddd;
+            color: #333;
+        }
+
+        @media (max-width: 480px) {
+            .choice-btn {
+                width: 60px;
+                height: 60px;
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>✂️ Rock Paper Scissors</h1>
+        
+        <div class="scoreboard">
+            <div class="score-item">
+                You
+                <span class="score-value" id="playerScore">0</span>
+            </div>
+            <div class="score-item">
+                vs AI
+                <span class="score-value" id="aiScore">0</span>
+            </div>
+        </div>
+
+        <div class="choices">
+            <button class="choice-btn" data-choice="rock">🪨</button>
+            <button class="choice-btn" data-choice="paper">📄</button>
+            <button class="choice-btn" data-choice="scissors">✂️</button>
+        </div>
+
+        <div class="result" id="result"></div>
+
+        <div class="buttons">
+            <button class="restart-btn" onclick="location.reload()">Reset</button>
+            <button class="back-btn" onclick="window.history.back()">Back</button>
+        </div>
+    </div>
+
+    <script>
+        let playerScore = 0;
+        let aiScore = 0;
+        const choices = ['rock', 'paper', 'scissors'];
+        const emojis = { rock: '🪨', paper: '📄', scissors: '✂️' };
+
+        function playBeep(frequency = 800) {
+            try {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = audioContext.createOscillator();
+                const gain = audioContext.createGain();
+                osc.connect(gain);
+                gain.connect(audioContext.destination);
+                osc.frequency.value = frequency;
+                gain.gain.setValueAtTime(0.3, audioContext.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+                osc.start(audioContext.currentTime);
+                osc.stop(audioContext.currentTime + 0.1);
+            } catch (e) {}
+        }
+
+        document.querySelectorAll('.choice-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const playerChoice = btn.dataset.choice;
+                const aiChoice = choices[Math.floor(Math.random() * choices.length)];
+
+                let result = '';
+                if (playerChoice === aiChoice) {
+                    result = "It's a Draw!";
+                } else if (
+                    (playerChoice === 'rock' && aiChoice === 'scissors') ||
+                    (playerChoice === 'paper' && aiChoice === 'rock') ||
+                    (playerChoice === 'scissors' && aiChoice === 'paper')
+                ) {
+                    result = 'You Win! 🎉';
+                    playerScore++;
+                    playBeep(1200);
+                } else {
+                    result = 'AI Wins! 🤖';
+                    aiScore++;
+                    playBeep(600);
+                }
+
+                document.getElementById('playerScore').textContent = playerScore;
+                document.getElementById('aiScore').textContent = aiScore;
+
+                document.getElementById('result').innerHTML = `
+                    <div class="result-text">${result}</div>
+                    <div class="result-details">
+                        <div class="result-item">
+                            <div class="result-emoji">${emojis[playerChoice]}</div>
+                            <div>You</div>
+                        </div>
+                        <div class="result-item">
+                            <div class="result-emoji">${emojis[aiChoice]}</div>
+                            <div>AI</div>
+                        </div>
+                    </div>
+                `;
+            });
+        });
+    </script>
+</body>
+</html>

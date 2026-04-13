@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Brick Breaker - Bubble Arcade</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;700;800&family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Fredoka', sans-serif;
+            background: linear-gradient(135deg, #FF6B6B 0%, #FF8C94 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 30px;
+            padding: 30px;
+            max-width: 500px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            text-align: center;
+        }
+
+        h1 {
+            font-family: 'Baloo 2', sans-serif;
+            font-size: 2rem;
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        .score {
+            font-size: 1.2rem;
+            color: #FF6B6B;
+            font-weight: 700;
+            margin-bottom: 15px;
+        }
+
+        #gameCanvas {
+            display: block;
+            border: 4px solid #FF6B6B;
+            border-radius: 15px;
+            background: #000;
+            margin: 20px auto;
+            max-width: 100%;
+        }
+
+        .instructions {
+            color: #666;
+            font-size: 0.95rem;
+            margin: 15px 0;
+        }
+
+        .buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        button {
+            flex: 1;
+            padding: 12px;
+            font-size: 1rem;
+            border: none;
+            border-radius: 15px;
+            cursor: pointer;
+            font-family: 'Fredoka', sans-serif;
+            font-weight: 700;
+            transition: all 0.3s ease;
+        }
+
+        .restart-btn {
+            background: linear-gradient(135deg, #FF6B6B 0%, #FF8C94 100%);
+            color: white;
+        }
+
+        .back-btn {
+            background: #ddd;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧱 Brick Breaker</h1>
+        
+        <div class="score">Score: <span id="score">0</span></div>
+
+        <canvas id="gameCanvas" width="400" height="400"></canvas>
+
+        <div class="instructions">
+            Move your paddle to bounce the ball and break bricks!
+        </div>
+
+        <div class="buttons">
+            <button class="restart-btn" onclick="location.reload()">Restart</button>
+            <button class="back-btn" onclick="window.history.back()">Back</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreDisplay = document.getElementById('score');
+
+        const paddle = {
+            x: canvas.width / 2 - 40,
+            y: canvas.height - 20,
+            width: 80,
+            height: 15,
+            speed: 7
+        };
+
+        const ball = {
+            x: canvas.width / 2,
+            y: canvas.height - 40,
+            radius: 6,
+            dx: 4,
+            dy: -4,
+            speed: 4
+        };
+
+        const brickRows = 4;
+        const brickCols = 8;
+        const brickWidth = canvas.width / brickCols;
+        const brickHeight = 20;
+        const brickPadding = 5;
+
+        let bricks = [];
+        let score = 0;
+        let gameOver = false;
+        let gameWon = false;
+
+        const keyState = {};
+
+        document.addEventListener('keydown', (e) => {
+            keyState[e.key] = true;
+        });
+
+        document.addEventListener('keyup', (e) => {
+            keyState[e.key] = false;
+        });
+
+        // Initialize bricks
+        function initBricks() {
+            bricks = [];
+            for (let row = 0; row < brickRows; row++) {
+                for (let col = 0; col < brickCols; col++) {
+                    bricks.push({
+                        x: col * brickWidth + brickPadding,
+                        y: row * (brickHeight + brickPadding) + 30,
+                        width: brickWidth - brickPadding * 2,
+                        height: brickHeight,
+                        hit: false
+                    });
+                }
+            }
+        }
+
+        function playBeep(frequency = 800) {
+            try {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = audioContext.createOscillator();
+                const gain = audioContext.createGain();
+                osc.connect(gain);
+                gain.connect(audioContext.destination);
+                osc.frequency.value = frequency;
+                gain.gain.setValueAtTime(0.3, audioContext.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+                osc.start(audioContext.currentTime);
+                osc.stop(audioContext.currentTime + 0.1);
+            } catch (e) {}
+        }
+
+        function update() {
+            if (gameOver || gameWon) return;
+
+            // Move paddle
+            if (keyState['ArrowLeft']) {
+                paddle.x = Math.max(0, paddle.x - paddle.speed);
+            }
+            if (keyState['ArrowRight']) {
+                paddle.x = Math.min(canvas.width - paddle.width, paddle.x + paddle.speed);
+            }
+
+            // Move ball
+            ball.x += ball.dx;
+            ball.y += ball.dy;
+
+            // Bounce off walls
+            if (ball.x - ball.radius < 0 || ball.x + ball.radius > canvas.width) {
+                ball.dx = -ball.dx;
+            }
+            if (ball.y - ball.radius < 0) {
+                ball.dy = -ball.dy;
+            }
+
+            // Bounce off paddle
+            if (ball.y + ball.radius > paddle.y &&
+                ball.x > paddle.x &&
+                ball.x < paddle.x + paddle.width) {
+                ball.dy = -ball.dy;
+                playBeep(800);
+            }
+
+            // Check brick collisions
+            bricks.forEach(brick => {
+                if (brick.hit) return;
+                if (ball.x + ball.radius > brick.x &&
+                    ball.x - ball.radius < brick.x + brick.width &&
+                    ball.y + ball.radius > brick.y &&
+                    ball.y - ball.radius < brick.y + brick.height) {
+                    brick.hit = true;
+                    ball.dy = -ball.dy;
+                    score++;
+                    scoreDisplay.textContent = score;
+                    playBeep(1000);
+                    
+                    if (bricks.every(b => b.hit)) {
+                        gameWon = true;
+                    }
+                }
+            });
+
+            // Game over
+            if (ball.y > canvas.height) {
+                gameOver = true;
+                playBeep(400, 300);
+            }
+        }
+
+        function draw() {
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw paddle
+            ctx.fillStyle = '#FF6B6B';
+            ctx.fillRect(paddle.x, paddle.y, paddle.width, paddle.height);
+
+            // Draw ball
+            ctx.fillStyle = '#FFF';
+            ctx.beginPath();
+            ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Draw bricks
+            bricks.forEach(brick => {
+                if (!brick.hit) {
+                    ctx.fillStyle = `hsl(${Math.random() * 60 + 180}, 100%, 50%)`;
+                    ctx.fillRect(brick.x, brick.y, brick.width, brick.height);
+                }
+            });
+
+            if (gameOver) {
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = '#FFF';
+                ctx.font = '30px Baloo 2';
+                ctx.textAlign = 'center';
+                ctx.fillText('GAME OVER', canvas.width / 2, canvas.height / 2);
+            } else if (gameWon) {
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = '#FFF';
+                ctx.font = '30px Baloo 2';
+                ctx.textAlign = 'center';
+                ctx.fillText('YOU WIN! 🎉', canvas.width / 2, canvas.height / 2 - 20);
+                ctx.font = '18px Fredoka';
+                ctx.fillText(`Score: ${score}`, canvas.width / 2, canvas.height / 2 + 20);
+            }
+        }
+
+        function gameLoop() {
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        initBricks();
+        gameLoop();
+    </script>
+</body>
+</html>

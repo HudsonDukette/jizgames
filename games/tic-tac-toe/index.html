@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tic Tac Toe - Bubble Arcade</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;700;800&family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Fredoka', sans-serif;
+            background: linear-gradient(135deg, #A8EDEA 0%, #FED6E3 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 30px;
+            padding: 30px;
+            max-width: 500px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            text-align: center;
+        }
+
+        h1 {
+            font-family: 'Baloo 2', sans-serif;
+            font-size: 2rem;
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        .status {
+            font-size: 1.2rem;
+            color: #666;
+            margin-bottom: 20px;
+            min-height: 30px;
+        }
+
+        .board {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin: 20px 0;
+            max-width: 300px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .cell {
+            width: 90px;
+            height: 90px;
+            background: linear-gradient(135deg, #A8EDEA 0%, #FED6E3 100%);
+            border: 2px solid #FED6E3;
+            border-radius: 15px;
+            font-size: 2.5rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-family: 'Baloo 2', sans-serif;
+            font-weight: 700;
+        }
+
+        .cell:hover {
+            transform: scale(1.05);
+        }
+
+        .cell:active {
+            transform: scale(0.95);
+        }
+
+        .cell.x {
+            color: #FF6B6B;
+        }
+
+        .cell.o {
+            color: #4ECDC4;
+        }
+
+        .buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        button {
+            flex: 1;
+            padding: 12px;
+            font-size: 1rem;
+            border: none;
+            border-radius: 15px;
+            cursor: pointer;
+            font-family: 'Fredoka', sans-serif;
+            font-weight: 700;
+            transition: all 0.3s ease;
+        }
+
+        .restart-btn {
+            background: linear-gradient(135deg, #A8EDEA 0%, #FED6E3 100%);
+            color: #333;
+        }
+
+        .back-btn {
+            background: #ddd;
+            color: #333;
+        }
+
+        @media (max-width: 480px) {
+            .cell {
+                width: 70px;
+                height: 70px;
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>⭕ Tic Tac Toe</h1>
+        
+        <div class="status" id="status">You (X) vs AI (O)</div>
+
+        <div class="board" id="board">
+            <button class="cell" data-index="0"></button>
+            <button class="cell" data-index="1"></button>
+            <button class="cell" data-index="2"></button>
+            <button class="cell" data-index="3"></button>
+            <button class="cell" data-index="4"></button>
+            <button class="cell" data-index="5"></button>
+            <button class="cell" data-index="6"></button>
+            <button class="cell" data-index="7"></button>
+            <button class="cell" data-index="8"></button>
+        </div>
+
+        <div class="buttons">
+            <button class="restart-btn" onclick="location.reload()">New Game</button>
+            <button class="back-btn" onclick="window.history.back()">Back</button>
+        </div>
+    </div>
+
+    <script>
+        let board = Array(9).fill(null);
+        let gameOver = false;
+        const statusDisplay = document.getElementById('status');
+
+        const winConditions = [
+            [0, 1, 2], [3, 4, 5], [6, 7, 8],
+            [0, 3, 6], [1, 4, 7], [2, 5, 8],
+            [0, 4, 8], [2, 4, 6]
+        ];
+
+        function playBeep(frequency = 800) {
+            try {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = audioContext.createOscillator();
+                const gain = audioContext.createGain();
+                osc.connect(gain);
+                gain.connect(audioContext.destination);
+                osc.frequency.value = frequency;
+                gain.gain.setValueAtTime(0.3, audioContext.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+                osc.start(audioContext.currentTime);
+                osc.stop(audioContext.currentTime + 0.1);
+            } catch (e) {}
+        }
+
+        function checkWinner(b) {
+            for (const [a, b1, c] of winConditions) {
+                if (b[a] && b[a] === b[b1] && b[b1] === b[c]) {
+                    return b[a];
+                }
+            }
+            return null;
+        }
+
+        function aiMove() {
+            const emptyIndices = board.map((v, i) => v === null ? i : null).filter(v => v !== null);
+            if (emptyIndices.length === 0) return;
+
+            // Check if AI can win
+            for (const idx of emptyIndices) {
+                const testBoard = [...board];
+                testBoard[idx] = 'O';
+                if (checkWinner(testBoard) === 'O') {
+                    board[idx] = 'O';
+                    renderBoard();
+                    playBeep(1000);
+                    return;
+                }
+            }
+
+            // Check if player can win and block
+            for (const idx of emptyIndices) {
+                const testBoard = [...board];
+                testBoard[idx] = 'X';
+                if (checkWinner(testBoard) === 'X') {
+                    board[idx] = 'O';
+                    renderBoard();
+                    playBeep(1000);
+                    return;
+                }
+            }
+
+            // Take center if available
+            if (emptyIndices.includes(4)) {
+                board[4] = 'O';
+                renderBoard();
+                playBeep(1000);
+                return;
+            }
+
+            // Take random corner or side
+            const idx = emptyIndices[Math.floor(Math.random() * emptyIndices.length)];
+            board[idx] = 'O';
+            renderBoard();
+            playBeep(1000);
+        }
+
+        function renderBoard() {
+            document.querySelectorAll('.cell').forEach((cell, idx) => {
+                cell.textContent = board[idx] || '';
+                cell.className = 'cell';
+                if (board[idx]) cell.classList.add(board[idx].toLowerCase());
+            });
+        }
+
+        function endGame() {
+            gameOver = true;
+            const winner = checkWinner(board);
+            if (winner === 'X') {
+                statusDisplay.textContent = '🎉 You win! Great game!';
+                playBeep(1200);
+            } else if (winner === 'O') {
+                statusDisplay.textContent = '🤖 AI wins! Try again!';
+                playBeep(600);
+            } else {
+                statusDisplay.textContent = '🤝 Draw! Good match!';
+            }
+        }
+
+        document.querySelectorAll('.cell').forEach((cell) => {
+            cell.addEventListener('click', () => {
+                if (gameOver) return;
+                const idx = parseInt(cell.dataset.index);
+                if (board[idx]) return;
+
+                board[idx] = 'X';
+                renderBoard();
+                playBeep(800);
+
+                if (checkWinner(board)) {
+                    endGame();
+                    return;
+                }
+
+                if (board.every(v => v !== null)) {
+                    endGame();
+                    return;
+                }
+
+                setTimeout(() => {
+                    aiMove();
+                    if (checkWinner(board)) {
+                        endGame();
+                    } else if (board.every(v => v !== null)) {
+                        endGame();
+                    }
+                }, 300);
+            });
+        });
+
+        renderBoard();
+    </script>
+</body>
+</html>

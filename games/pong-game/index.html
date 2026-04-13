@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pong Battle - Bubble Arcade</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;700;800&family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Fredoka', sans-serif;
+            background: linear-gradient(135deg, #FF6B6B 0%, #FF8C94 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 30px;
+            padding: 30px;
+            max-width: 600px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            text-align: center;
+        }
+
+        h1 {
+            font-family: 'Baloo 2', sans-serif;
+            font-size: 2rem;
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        .score-board {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 20px;
+            font-size: 1.2rem;
+        }
+
+        .score-item {
+            color: #666;
+        }
+
+        .score-value {
+            display: block;
+            font-size: 2rem;
+            color: #FF6B6B;
+            font-weight: 700;
+        }
+
+        #gameCanvas {
+            display: block;
+            border: 5px solid #FF6B6B;
+            border-radius: 15px;
+            background: #000;
+            margin: 20px auto;
+            max-width: 100%;
+        }
+
+        .instructions {
+            color: #666;
+            font-size: 0.95rem;
+            margin: 15px 0;
+        }
+
+        .buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .restart-btn, .back-btn {
+            flex: 1;
+            padding: 12px;
+            font-size: 1rem;
+            border: none;
+            border-radius: 15px;
+            cursor: pointer;
+            font-family: 'Fredoka', sans-serif;
+            font-weight: 700;
+            transition: all 0.3s ease;
+        }
+
+        .restart-btn {
+            background: linear-gradient(135deg, #FF6B6B 0%, #FF8C94 100%);
+            color: white;
+        }
+
+        .back-btn {
+            background: #ddd;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏓 Pong Battle</h1>
+        
+        <div class="score-board">
+            <div class="score-item">
+                You
+                <span class="score-value" id="playerScore">0</span>
+            </div>
+            <div class="score-item">
+                AI
+                <span class="score-value" id="aiScore">0</span>
+            </div>
+        </div>
+
+        <canvas id="gameCanvas" width="500" height="300"></canvas>
+
+        <div class="instructions">
+            Move your paddle with arrow keys or mouse (top/bottom halves of screen)
+        </div>
+
+        <div class="buttons">
+            <button class="restart-btn" onclick="location.reload()">Restart</button>
+            <button class="back-btn" onclick="window.history.back()">Back</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const playerScoreDisplay = document.getElementById('playerScore');
+        const aiScoreDisplay = document.getElementById('aiScore');
+
+        const paddleWidth = 10;
+        const paddleHeight = 80;
+        const ballSize = 5;
+
+        let playerScore = 0;
+        let aiScore = 0;
+
+        const player = {
+            x: 10,
+            y: canvas.height / 2 - paddleHeight / 2,
+            width: paddleWidth,
+            height: paddleHeight,
+            dy: 0,
+            speed: 6
+        };
+
+        const ai = {
+            x: canvas.width - paddleWidth - 10,
+            y: canvas.height / 2 - paddleHeight / 2,
+            width: paddleWidth,
+            height: paddleHeight,
+            speed: 5
+        };
+
+        const ball = {
+            x: canvas.width / 2,
+            y: canvas.height / 2,
+            dx: 4,
+            dy: 4,
+            size: ballSize,
+            speed: 4
+        };
+
+        const keyState = {};
+
+        document.addEventListener('keydown', (e) => {
+            keyState[e.key] = true;
+        });
+
+        document.addEventListener('keyup', (e) => {
+            keyState[e.key] = false;
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const mouseY = e.clientY - rect.top;
+            if (mouseY < canvas.height / 2) {
+                player.y = Math.max(0, mouseY - paddleHeight / 2);
+            }
+        });
+
+        function update() {
+            if (keyState['ArrowUp']) player.y = Math.max(0, player.y - player.speed);
+            if (keyState['ArrowDown']) player.y = Math.min(canvas.height - paddleHeight, player.y + player.speed);
+
+            const aiCenter = ai.y + ai.height / 2;
+            const ballCenter = ball.y;
+            if (aiCenter < ballCenter - 35) {
+                ai.y = Math.min(canvas.height - paddleHeight, ai.y + ai.speed);
+            } else if (aiCenter > ballCenter + 35) {
+                ai.y = Math.max(0, ai.y - ai.speed);
+            }
+
+            ball.x += ball.dx;
+            ball.y += ball.dy;
+
+            if (ball.y - ball.size < 0 || ball.y + ball.size > canvas.height) {
+                ball.dy = -ball.dy;
+                ball.y = Math.max(ball.size, Math.min(canvas.height - ball.size, ball.y));
+            }
+
+            if (ball.x - ball.size < player.x + player.width &&
+                ball.y > player.y &&
+                ball.y < player.y + player.height) {
+                ball.dx = -ball.dx;
+                ball.dx *= 1.05;
+            }
+
+            if (ball.x + ball.size > ai.x &&
+                ball.y > ai.y &&
+                ball.y < ai.y + ai.height) {
+                ball.dx = -ball.dx;
+                ball.dx *= 1.05;
+            }
+
+            if (ball.x < 0) {
+                aiScore++;
+                aiScoreDisplay.textContent = aiScore;
+                resetBall();
+            } else if (ball.x > canvas.width) {
+                playerScore++;
+                playerScoreDisplay.textContent = playerScore;
+                resetBall();
+            }
+        }
+
+        function resetBall() {
+            ball.x = canvas.width / 2;
+            ball.y = canvas.height / 2;
+            ball.dx = (Math.random() > 0.5 ? 1 : -1) * 4;
+            ball.dy = (Math.random() > 0.5 ? 1 : -1) * 4;
+        }
+
+        function draw() {
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx.fillStyle = '#FFF';
+            for (let i = 0; i < canvas.height; i += 20) {
+                ctx.fillRect(canvas.width / 2 - 2, i, 4, 10);
+            }
+
+            ctx.fillStyle = '#FF6B6B';
+            ctx.fillRect(player.x, player.y, player.width, player.height);
+
+            ctx.fillStyle = '#4ECDC4';
+            ctx.fillRect(ai.x, ai.y, ai.width, ai.height);
+
+            ctx.fillStyle = '#FFF';
+            ctx.fillRect(ball.x - ball.size, ball.y - ball.size, ball.size * 2, ball.size * 2);
+        }
+
+        function gameLoop() {
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        gameLoop();
+    </script>
+</body>
+</html>

@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flappy Bird - Bubble Arcade</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;700;800&family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Fredoka', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 30px;
+            padding: 20px;
+            max-width: 350px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            text-align: center;
+        }
+
+        h1 {
+            font-family: 'Baloo 2', sans-serif;
+            font-size: 1.8rem;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .score {
+            font-size: 1.2rem;
+            color: #667eea;
+            font-weight: 700;
+            margin-bottom: 15px;
+        }
+
+        #gameCanvas {
+            display: block;
+            border: 4px solid #667eea;
+            border-radius: 15px;
+            background: linear-gradient(to bottom, #87CEEB 0%, #4FC3F7 100%);
+            margin: 15px auto;
+            cursor: pointer;
+        }
+
+        .instructions {
+            color: #666;
+            font-size: 0.95rem;
+            margin: 10px 0;
+        }
+
+        .buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        button {
+            flex: 1;
+            padding: 10px;
+            font-size: 0.95rem;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            font-family: 'Fredoka', sans-serif;
+            font-weight: 700;
+            transition: all 0.3s ease;
+        }
+
+        .restart-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .back-btn {
+            background: #ddd;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🐦 Flappy Bird</h1>
+        
+        <div class="score">Score: <span id="score">0</span></div>
+
+        <canvas id="gameCanvas" width="300" height="400"></canvas>
+
+        <div class="instructions">
+            Click or tap to flap wings!
+        </div>
+
+        <div class="buttons">
+            <button class="restart-btn" onclick="location.reload()">Restart</button>
+            <button class="back-btn" onclick="window.history.back()">Back</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreDisplay = document.getElementById('score');
+
+        const bird = {
+            x: 50,
+            y: 150,
+            radius: 15,
+            gravity: 0.5,
+            velocity: 0,
+            flapPower: -12,
+            maxVelocity: 10
+        };
+
+        const pipe = {
+            x: canvas.width,
+            width: 60,
+            height: 120,
+            gap: 130,
+            speed: 3
+        };
+
+        let score = 0;
+        let gameOver = false;
+        let pipes = [];
+
+        function playBeep(frequency = 800, duration = 100) {
+            try {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = audioContext.createOscillator();
+                const gain = audioContext.createGain();
+                osc.connect(gain);
+                gain.connect(audioContext.destination);
+                osc.frequency.value = frequency;
+                gain.gain.setValueAtTime(0.3, audioContext.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration / 1000);
+                osc.start(audioContext.currentTime);
+                osc.stop(audioContext.currentTime + duration / 1000);
+            } catch (e) {}
+        }
+
+        function update() {
+            if (gameOver) return;
+
+            bird.velocity += bird.gravity;
+            bird.velocity = Math.min(bird.velocity, bird.maxVelocity);
+            bird.y += bird.velocity;
+
+            if (bird.y + bird.radius > canvas.height || bird.y - bird.radius < 0) {
+                gameOver = true;
+                playBeep(400, 300);
+                return;
+            }
+
+            for (let i = 0; i < pipes.length; i++) {
+                pipes[i].x -= pipe.speed;
+
+                if (pipes[i].x + pipe.width < bird.x - bird.radius) {
+                    if (!pipes[i].scored) {
+                        score++;
+                        scoreDisplay.textContent = score;
+                        pipes[i].scored = true;
+                        playBeep(1000, 100);
+                    }
+                }
+
+                const topPipe = pipes[i].height;
+                const bottomPipe = pipes[i].height + pipe.gap;
+
+                if (bird.x + bird.radius > pipes[i].x &&
+                    bird.x - bird.radius < pipes[i].x + pipe.width) {
+                    if (bird.y - bird.radius < topPipe || bird.y + bird.radius > bottomPipe) {
+                        gameOver = true;
+                        playBeep(400, 300);
+                        return;
+                    }
+                }
+
+                if (pipes[i].x < -pipe.width) {
+                    pipes.splice(i, 1);
+                    i--;
+                }
+            }
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw bird
+            ctx.fillStyle = '#FFD700';
+            ctx.beginPath();
+            ctx.arc(bird.x, bird.y, bird.radius, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.fillStyle = '#000';
+            ctx.beginPath();
+            ctx.arc(bird.x + 5, bird.y - 5, 3, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Draw pipes
+            ctx.fillStyle = '#4CAF50';
+            pipes.forEach(p => {
+                ctx.fillRect(p.x, 0, pipe.width, p.height);
+                ctx.fillRect(p.x, p.height + pipe.gap, pipe.width, canvas.height - p.height - pipe.gap);
+            });
+
+            if (gameOver) {
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = '#FFF';
+                ctx.font = '30px Baloo 2';
+                ctx.textAlign = 'center';
+                ctx.fillText('GAME OVER', canvas.width / 2, canvas.height / 2 - 20);
+                ctx.font = '20px Fredoka';
+                ctx.fillText(`Score: ${score}`, canvas.width / 2, canvas.height / 2 + 20);
+            }
+        }
+
+        function gameLoop() {
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        document.addEventListener('click', () => {
+            if (gameOver) return;
+            bird.velocity = bird.flapPower;
+            playBeep(1200, 50);
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' && gameOver) {
+                location.reload();
+            }
+        });
+
+        // Generate pipes
+        const interval = setInterval(() => {
+            if (!gameOver) {
+                const randomHeight = Math.random() * (canvas.height - pipe.gap - 50) + 25;
+                pipes.push({ x: canvas.width, height: randomHeight, scored: false });
+            }
+        }, 2000);
+
+        gameLoop();
+    </script>
+</body>
+</html>

@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cookie Clicker - Bubble Arcade</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;700;800&family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Fredoka', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 30px;
+            padding: 40px;
+            max-width: 500px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            text-align: center;
+        }
+
+        h1 {
+            font-family: 'Baloo 2', sans-serif;
+            font-size: 2.5rem;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .score {
+            font-size: 1.3rem;
+            color: #666;
+            margin-bottom: 30px;
+        }
+
+        .score-value {
+            font-size: 2rem;
+            color: #667eea;
+            font-weight: 700;
+        }
+
+        .cookie-btn {
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            border: none;
+            font-size: 5rem;
+            cursor: pointer;
+            transition: all 0.1s ease;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin: 20px auto;
+            background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+            border: 5px solid #FF8C00;
+        }
+
+        .cookie-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+        }
+
+        .cookie-btn:active {
+            transform: scale(0.95);
+        }
+
+        .buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 30px;
+        }
+
+        button {
+            flex: 1;
+            padding: 12px;
+            font-size: 0.95rem;
+            border: none;
+            border-radius: 15px;
+            cursor: pointer;
+            font-family: 'Fredoka', sans-serif;
+            font-weight: 700;
+            transition: all 0.3s ease;
+        }
+
+        .restart-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .restart-btn:hover {
+            transform: scale(1.05);
+        }
+
+        .back-btn {
+            background: #ddd;
+            color: #333;
+        }
+
+        .back-btn:hover {
+            background: #ccc;
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                padding: 20px;
+            }
+
+            h1 {
+                font-size: 1.8rem;
+            }
+
+            .cookie-btn {
+                width: 150px;
+                height: 150px;
+                font-size: 3.5rem;
+            }
+        }
+    </style>
+    <style>
+        :root{
+            --bg: linear-gradient(135deg, #667eea 0%, #764ba2 25%, #f093fb 50%, #4facfe 75%, #00f2fe 100%);
+            --card-bg: #ffffff;
+            --text: #333333;
+            --muted: #666666;
+            --accent: #667eea;
+            --card-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        html[data-theme="dark"]{
+            --bg: linear-gradient(135deg, #0f1724 0%, #071024 100%);
+            --card-bg: #0b1220;
+            --text: #e6eef9;
+            --muted: #9aa7b9;
+            --accent: #7dd3fc;
+            --card-shadow: 0 10px 30px rgba(0,0,0,0.6);
+        }
+
+        body{ background: var(--bg); color: var(--text); transition: background 0.3s ease, color 0.3s ease; }
+        .container, .game-card{ background: var(--card-bg); color: var(--text); box-shadow: var(--card-shadow); }
+        .game-card h3{ color: var(--text); }
+        .game-card p{ color: var(--muted); }
+        header{ color: var(--text); text-shadow: none; }
+        .theme-toggle{ position: fixed; right: 16px; top: 16px; z-index:9999; background: var(--card-bg); color: var(--text); border: none; padding: 8px 10px; border-radius: 999px; box-shadow: var(--card-shadow); cursor: pointer; font-size: 1.1rem; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🍪 Cookie Clicker</h1>
+        <div class="score">
+            Cookies: <span class="score-value" id="score">0</span>
+        </div>
+        
+        <button class="cookie-btn" id="cookieBtn">🍪</button>
+        
+        <div class="buttons">
+            <button class="restart-btn" onclick="resetGame()">Reset</button>
+            <button class="back-btn" onclick="window.history.back()">Back</button>
+        </div>
+    </div>
+
+    <script>
+        let score = localStorage.getItem('clickerScore') ? parseInt(localStorage.getItem('clickerScore')) : 0;
+        const scoreDisplay = document.getElementById('score');
+        const cookieBtn = document.getElementById('cookieBtn');
+
+        scoreDisplay.textContent = score;
+
+        cookieBtn.addEventListener('click', () => {
+            score++;
+            scoreDisplay.textContent = score;
+            localStorage.setItem('clickerScore', score);
+            playBeep();
+            createFloatingText();
+        });
+
+        function playBeep(frequency = 800) {
+            try {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = audioContext.createOscillator();
+                const gain = audioContext.createGain();
+                osc.connect(gain);
+                gain.connect(audioContext.destination);
+                osc.frequency.value = frequency;
+                gain.gain.setValueAtTime(0.3, audioContext.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.05);
+                osc.start(audioContext.currentTime);
+                osc.stop(audioContext.currentTime + 0.05);
+            } catch (e) {}
+        }
+
+        function createFloatingText() {
+            const text = document.createElement('div');
+            text.textContent = '+1';
+            text.style.position = 'fixed';
+            text.style.pointerEvents = 'none';
+            text.style.fontSize = '1.5rem';
+            text.style.color = '#667eea';
+            text.style.fontWeight = 'bold';
+            text.style.left = cookieBtn.offsetLeft + 100 + 'px';
+            text.style.top = cookieBtn.offsetTop + 100 + 'px';
+            document.body.appendChild(text);
+
+            let opacity = 1;
+            let top = parseInt(text.style.top);
+            const interval = setInterval(() => {
+                opacity -= 0.05;
+                top -= 5;
+                text.style.opacity = opacity;
+                text.style.top = top + 'px';
+                if (opacity <= 0) {
+                    clearInterval(interval);
+                    text.remove();
+                }
+            }, 30);
+        }
+
+        function resetGame() {
+            if (confirm('Reset your score to 0?')) {
+                score = 0;
+                scoreDisplay.textContent = score;
+                localStorage.setItem('clickerScore', score);
+            }
+                }
+        </script>
+
+        <button id="themeToggle" class="theme-toggle" aria-label="Toggle theme">🌙</button>
+        <script>
+        (function(){
+            const toggle = document.getElementById('themeToggle');
+            const saved = localStorage.getItem('theme');
+            const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+            const initial = saved || (prefersDark ? 'dark' : 'light');
+            setTheme(initial);
+
+            function setTheme(t){
+                if(t === 'dark') document.documentElement.setAttribute('data-theme','dark');
+                else document.documentElement.removeAttribute('data-theme');
+                toggle.textContent = t === 'dark' ? '☀️' : '🌙';
+            }
+
+            toggle.addEventListener('click', () => {
+                const current = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+                const next = current === 'dark' ? 'light' : 'dark';
+                setTheme(next);
+                localStorage.setItem('theme', next);
+                try { (new (window.AudioContext || window.webkitAudioContext)()).resume(); } catch(e) {}
+            });
+
+            if(!saved && window.matchMedia){
+                window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
+                    const newPref = e.matches ? 'dark' : 'light';
+                    const hasSaved = localStorage.getItem('theme');
+                    if(!hasSaved) setTheme(newPref);
+                });
+            }
+        })();
+        </script>
+</body>
+</html>

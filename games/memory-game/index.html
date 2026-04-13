@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Memory Match - Bubble Arcade</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;700;800&family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Fredoka', sans-serif;
+            background: linear-gradient(135deg, #4ECDC4 0%, #44A08D 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 30px;
+            padding: 30px;
+            max-width: 500px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            text-align: center;
+        }
+
+        h1 {
+            font-family: 'Baloo 2', sans-serif;
+            font-size: 2rem;
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        .info {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 20px;
+            font-size: 1.1rem;
+        }
+
+        .info-item {
+            color: #666;
+        }
+
+        .info-value {
+            display: block;
+            color: #4ECDC4;
+            font-weight: 700;
+            font-size: 1.5rem;
+        }
+
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            margin: 20px 0;
+        }
+
+        .card {
+            aspect-ratio: 1;
+            background: linear-gradient(135deg, #4ECDC4 0%, #44A08D 100%);
+            border: none;
+            border-radius: 15px;
+            font-size: 2rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        .card:hover:not(.flipped) {
+            transform: scale(1.05);
+        }
+
+        .card.flipped {
+            background: white;
+            color: #333;
+        }
+
+        .card:active {
+            transform: scale(0.95);
+        }
+
+        .card.matched {
+            opacity: 0.6;
+            cursor: default;
+        }
+
+        .status {
+            margin: 20px 0;
+            font-size: 1.1rem;
+            color: #333;
+            min-height: 30px;
+        }
+
+        .buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .restart-btn, .back-btn {
+            flex: 1;
+            padding: 12px;
+            font-size: 1rem;
+            border: none;
+            border-radius: 15px;
+            cursor: pointer;
+            font-family: 'Fredoka', sans-serif;
+            font-weight: 700;
+            transition: all 0.3s ease;
+        }
+
+        .restart-btn {
+            background: linear-gradient(135deg, #4ECDC4 0%, #44A08D 100%);
+            color: white;
+        }
+
+        .back-btn {
+            background: #ddd;
+            color: #333;
+        }
+
+        @media (max-width: 480px) {
+            .cards-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧠 Memory Match</h1>
+        
+        <div class="info">
+            <div class="info-item">
+                Pairs: <span class="info-value" id="pairsFound">0</span>/8
+            </div>
+            <div class="info-item">
+                Moves: <span class="info-value" id="moves">0</span>
+            </div>
+        </div>
+
+        <div class="cards-grid" id="cardsGrid"></div>
+
+        <div class="status" id="status">Match all pairs!</div>
+
+        <div class="buttons">
+            <button class="restart-btn" onclick="location.reload()">Restart</button>
+            <button class="back-btn" onclick="window.history.back()">Back</button>
+        </div>
+    </div>
+
+    <script>
+        const emojis = ['🍎', '🍌', '🍊', '🍇', '🍓', '🍉', '🍒', '🍑'];
+        const cardsGrid = document.getElementById('cardsGrid');
+        const pairsFoundDisplay = document.getElementById('pairsFound');
+        const movesDisplay = document.getElementById('moves');
+        const statusDisplay = document.getElementById('status');
+
+        let cards = [...emojis, ...emojis].sort(() => Math.random() - 0.5);
+        let flipped = [];
+        let matched = [];
+        let moves = 0;
+
+        function playBeep(frequency = 800) {
+            try {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = audioContext.createOscillator();
+                const gain = audioContext.createGain();
+                osc.connect(gain);
+                gain.connect(audioContext.destination);
+                osc.frequency.value = frequency;
+                gain.gain.setValueAtTime(0.3, audioContext.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+                osc.start(audioContext.currentTime);
+                osc.stop(audioContext.currentTime + 0.1);
+            } catch (e) {}
+        }
+
+        function createCards() {
+            cardsGrid.innerHTML = '';
+            cards.forEach((emoji, index) => {
+                const card = document.createElement('button');
+                card.className = 'card';
+                card.textContent = '❓';
+                card.dataset.index = index;
+                card.dataset.emoji = emoji;
+                card.addEventListener('click', () => flipCard(card));
+                cardsGrid.appendChild(card);
+            });
+        }
+
+        function flipCard(card) {
+            const index = card.dataset.index;
+            if (flipped.includes(index) || matched.includes(index)) return;
+            if (flipped.length >= 2) return;
+
+            card.textContent = card.dataset.emoji;
+            card.classList.add('flipped');
+            flipped.push(index);
+            playBeep(800);
+
+            if (flipped.length === 2) {
+                moves++;
+                movesDisplay.textContent = moves;
+                checkMatch();
+            }
+        }
+
+        function checkMatch() {
+            setTimeout(() => {
+                const [idx1, idx2] = flipped;
+                const card1 = document.querySelector(`[data-index="${idx1}"]`);
+                const card2 = document.querySelector(`[data-index="${idx2}"]`);
+
+                if (cards[idx1] === cards[idx2]) {
+                    matched.push(idx1, idx2);
+                    card1.classList.add('matched');
+                    card2.classList.add('matched');
+                    playBeep(1200);
+                    pairsFoundDisplay.textContent = matched.length / 2;
+
+                    if (matched.length === cards.length) {
+                        statusDisplay.textContent = `🎉 You won in ${moves} moves!`;
+                    }
+                } else {
+                    card1.textContent = '❓';
+                    card2.textContent = '❓';
+                    card1.classList.remove('flipped');
+                    card2.classList.remove('flipped');
+                }
+
+                flipped = [];
+            }, 600);
+        }
+
+        createCards();
+    </script>
+</body>
+</html>
